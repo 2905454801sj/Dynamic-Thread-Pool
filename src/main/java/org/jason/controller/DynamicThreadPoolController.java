@@ -1,10 +1,12 @@
 package org.jason.controller;
 
+import org.jason.dto.ThreadPoolMetrics;
+import org.jason.service.ThreadPoolMonitorService;
 import org.jason.threadPool.DynamicThreadPool;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.RejectedExecutionHandler;
@@ -19,27 +21,18 @@ import java.util.concurrent.RejectedExecutionHandler;
 public class DynamicThreadPoolController {
     @Autowired
     private DynamicThreadPool threadPool;
+    
+    @Autowired
+    private ThreadPoolMonitorService monitorService;
 
     /**
-     * 获取线程池详细信息
+     * 获取线程池详细信息（使用缓存优化）
      */
     @GetMapping("/details")
-    public ResponseEntity<Map<String, Object>> getThreadPoolDetails() {
-        Map<String, Object> details = new HashMap<>();
-        details.put("corePoolSize", threadPool.getCorePoolSize());
-        details.put("maximumPoolSize", threadPool.getMaximumPoolSize());
-        details.put("poolSize", threadPool.getPoolSize());
-        details.put("activeCount", threadPool.getActiveCount());
-        details.put("taskCount", threadPool.getTaskCount());
-        details.put("completedTaskCount", threadPool.getCompletedTaskCount());
-        details.put("queueSize", threadPool.getQueue().size());
-        details.put("rejectedExecutionCount", threadPool.getRejectedExecutionCount());
-        details.put("threadUsageRate", String.format("%.2f%%", threadPool.getThreadUsageRate() * 100));
-        details.put("isShutdown", threadPool.isShutdown());
-        details.put("isTerminated", threadPool.isTerminated());
-        details.put("timestamp", System.currentTimeMillis());
-
-        return ResponseEntity.ok(details);
+    public ResponseEntity<ThreadPoolMetrics> getThreadPoolDetails() {
+        // 使用缓存服务，1秒内重复请求直接返回缓存
+        ThreadPoolMetrics metrics = monitorService.getMetrics();
+        return ResponseEntity.ok(metrics);
     }
 
     /**
@@ -211,28 +204,13 @@ public class DynamicThreadPoolController {
     }
 
     /**
-     * 获取线程池运行时统计信息
+     * 获取线程池运行时统计信息（使用缓存优化）
      */
     @GetMapping("/stats/runtime")
-    public ResponseEntity<Map<String, Object>> getRuntimeStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("corePoolSize", threadPool.getCorePoolSize());
-        stats.put("maximumPoolSize", threadPool.getMaximumPoolSize());
-        stats.put("poolSize", threadPool.getPoolSize());
-        stats.put("activeCount", threadPool.getActiveCount());
-        stats.put("taskCount", threadPool.getTaskCount());
-        stats.put("completedTaskCount", threadPool.getCompletedTaskCount());
-        stats.put("queueSize", threadPool.getQueue().size());
-        stats.put("queueRemainingCapacity", threadPool.getQueue().remainingCapacity());
-        stats.put("rejectedExecutionCount", threadPool.getRejectedExecutionCount());
-        stats.put("threadUsageRate", threadPool.getThreadUsageRate());
-        stats.put("alertThreshold", threadPool.getAlertThreshold());
-        stats.put("alertStats", threadPool.getAlertStats());
-        stats.put("isShutdown", threadPool.isShutdown());
-        stats.put("isTerminated", threadPool.isTerminated());
-        stats.put("timestamp", System.currentTimeMillis());
-
-        return ResponseEntity.ok(stats);
+    public ResponseEntity<ThreadPoolMetrics> getRuntimeStats() {
+        // 使用缓存服务，1秒内重复请求直接返回缓存
+        ThreadPoolMetrics metrics = monitorService.getRuntimeStats();
+        return ResponseEntity.ok(metrics);
     }
 
     /**
