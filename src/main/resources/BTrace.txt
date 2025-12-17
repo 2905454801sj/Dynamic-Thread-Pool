@@ -1,0 +1,401 @@
+================================================================================
+                    BTrace 使用指南 / BTrace Usage Guide
+================================================================================
+
+1. 安装准备 / Prerequisites
+================================================================================
+
+第一步：下载 BTrace / Step 1: Download BTrace
+下载地址 / Download: https://github.com/btraceio/btrace/releases
+解压到任意目录，例如 / Extract to: D:\tools\btrace
+
+第二步：配置环境变量 / Step 2: Set Environment Variable
+Windows:
+  系统属性 -> 环境变量 -> Path -> 添加: D:\tools\btrace\bin
+  System Properties -> Environment Variables -> Path -> Add: D:\tools\btrace\bin
+
+验证安装 / Verify:
+  btrace -version
+
+================================================================================
+2. 启动流程 / Startup Process
+================================================================================
+
+步骤 1：启动应用 / Step 1: Start Application
+-------------------------------------------------
+mvn spring-boot:run
+
+应用会在 8080 端口启动
+Application will start on port 8080
+
+步骤 2：启动 BTrace 监控 / Step 2: Start BTrace Monitoring
+-------------------------------------------------
+
+方式 A：使用 API（推荐）/ Method A: Use API (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# 启动任务执行监控 / Start task execution monitoring
+curl -X POST http://localhost:8080/api/btrace/start/ThreadPoolExecutionTrace
+
+# 启动拒绝监控 / Start rejection monitoring
+curl -X POST http://localhost:8080/api/btrace/start/RejectionTrace
+
+# 启动告警监控 / Start alert monitoring
+curl -X POST http://localhost:8080/api/btrace/start/AlertTrace
+
+
+方式 B：使用命令行 / Method B: Use Command Line
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# 1. 获取 Java 进程 ID / Get Java Process ID
+jps
+
+# 输出示例 / Example output:
+# 12345 Application
+# 67890 Jps
+
+# 2. 启动 BTrace（使用上面的 PID）/ Start BTrace (use PID from above)
+btrace 12345 src/main/btrace/ThreadPoolExecutionTrace.java
+
+# Windows 用户使用 / Windows users use:
+btrace.bat 12345 src/main/btrace/ThreadPoolExecutionTrace.java
+
+
+步骤 3：生成测试数据 / Step 3: Generate Test Data
+-------------------------------------------------
+# 提交 100 个测试任务 / Submit 100 test tasks
+curl -X POST http://localhost:8080/api/threadpool/test/submit?count=100
+
+
+步骤 4：查看监控日志 / Step 4: View Monitoring Logs
+-------------------------------------------------
+# 查看最近 50 行日志 / View last 50 lines
+curl http://localhost:8080/api/btrace/logs/ThreadPoolExecutionTrace?lines=50
+
+# 或直接打开日志文件 / Or open log file directly:
+# logs/btrace/ThreadPoolExecutionTrace.log
+
+
+步骤 5：停止监控 / Step 5: Stop Monitoring
+-------------------------------------------------
+# 停止指定脚本 / Stop specific script
+curl -X POST http://localhost:8080/api/btrace/stop/ThreadPoolExecutionTrace
+
+# 停止所有脚本 / Stop all scripts
+curl -X POST http://localhost:8080/api/btrace/stop-all
+
+================================================================================
+3. API 接口说明 / API Endpoints
+================================================================================
+
+基础 URL / Base URL: http://localhost:8080/api/btrace
+
+--------------------------------------------------------------------------------
+3.1 启动脚本 / Start Script
+--------------------------------------------------------------------------------
+POST /api/btrace/start/{scriptName}
+
+示例 / Example:
+curl -X POST http://localhost:8080/api/btrace/start/ThreadPoolExecutionTrace
+
+返回数据 / Response:
+{
+  "success": true,
+  "message": "BTrace script started successfully: ThreadPoolExecutionTrace",
+  "logFile": "logs/btrace/ThreadPoolExecutionTrace.log"
+}
+
+--------------------------------------------------------------------------------
+3.2 停止脚本 / Stop Script
+--------------------------------------------------------------------------------
+POST /api/btrace/stop/{scriptName}
+
+示例 / Example:
+curl -X POST http://localhost:8080/api/btrace/stop/ThreadPoolExecutionTrace
+
+返回数据 / Response:
+{
+  "success": true,
+  "message": "BTrace script stopped successfully: ThreadPoolExecutionTrace"
+}
+
+--------------------------------------------------------------------------------
+3.3 查看脚本状态 / Check Script Status
+--------------------------------------------------------------------------------
+GET /api/btrace/status/{scriptName}
+
+示例 / Example:
+curl http://localhost:8080/api/btrace/status/ThreadPoolExecutionTrace
+
+返回数据 / Response:
+{
+  "scriptName": "ThreadPoolExecutionTrace",
+  "isActive": true,
+  "status": "RUNNING",
+  "logFile": "logs/btrace/ThreadPoolExecutionTrace.log"
+}
+
+--------------------------------------------------------------------------------
+3.4 查看所有可用脚本 / List Available Scripts
+--------------------------------------------------------------------------------
+GET /api/btrace/scripts
+
+示例 / Example:
+curl http://localhost:8080/api/btrace/scripts
+
+返回数据 / Response:
+{
+  "scripts": [
+    "ThreadPoolExecutionTrace",
+    "RejectionTrace",
+    "ParameterChangeTrace",
+    "AlertTrace",
+    "PerformanceTrace"
+  ],
+  "count": 5,
+  "descriptions": {
+    "ThreadPoolExecutionTrace": "Monitor task execution time and status",
+    "RejectionTrace": "Monitor task rejection events",
+    "ParameterChangeTrace": "Monitor dynamic parameter adjustments",
+    "AlertTrace": "Monitor alert system triggers",
+    "PerformanceTrace": "Performance hotspot analysis and slow method detection"
+  }
+}
+
+--------------------------------------------------------------------------------
+3.5 查看正在运行的脚本 / List Active Scripts
+--------------------------------------------------------------------------------
+GET /api/btrace/active
+
+示例 / Example:
+curl http://localhost:8080/api/btrace/active
+
+返回数据 / Response:
+{
+  "activeScripts": ["ThreadPoolExecutionTrace", "RejectionTrace"],
+  "count": 2
+}
+
+--------------------------------------------------------------------------------
+3.6 查看日志 / View Logs
+--------------------------------------------------------------------------------
+GET /api/btrace/logs/{scriptName}?lines=100
+
+示例 / Examples:
+# 查看最近 100 行（默认）/ View last 100 lines (default)
+curl http://localhost:8080/api/btrace/logs/ThreadPoolExecutionTrace
+
+# 查看最近 50 行 / View last 50 lines
+curl http://localhost:8080/api/btrace/logs/ThreadPoolExecutionTrace?lines=50
+
+返回数据 / Response:
+{
+  "success": true,
+  "scriptName": "ThreadPoolExecutionTrace",
+  "lines": 100,
+  "logs": "========================================\nTask Submitted #1\n...",
+  "logFile": "logs/btrace/ThreadPoolExecutionTrace.log"
+}
+
+--------------------------------------------------------------------------------
+3.7 快速启动组合 / Quick Start Presets
+--------------------------------------------------------------------------------
+POST /api/btrace/quick-start/{preset}
+
+可用预设 / Available Presets:
+- basic: 基础监控（任务执行 + 拒绝）/ Basic monitoring (execution + rejection)
+- alert: 告警监控（告警 + 参数变更）/ Alert monitoring (alert + parameter changes)
+- performance: 性能监控（性能分析 + 任务执行）/ Performance monitoring
+- full: 全部监控 / Full monitoring (all scripts)
+
+示例 / Examples:
+# 启动基础监控 / Start basic monitoring
+curl -X POST http://localhost:8080/api/btrace/quick-start/basic
+
+# 启动全部监控 / Start full monitoring
+curl -X POST http://localhost:8080/api/btrace/quick-start/full
+
+返回数据 / Response:
+{
+  "success": true,
+  "preset": "basic",
+  "started": ["ThreadPoolExecutionTrace", "RejectionTrace"],
+  "failed": [],
+  "message": "Started 2 scripts successfully"
+}
+
+================================================================================
+4. 可用脚本 / Available Scripts
+================================================================================
+
+--------------------------------------------------------------------------------
+ThreadPoolExecutionTrace
+--------------------------------------------------------------------------------
+作用 / Purpose:
+监控线程池任务的执行过程
+Monitor thread pool task execution lifecycle
+
+监控内容 / Monitors:
+- 任务提交 / Task submission
+- 任务开始执行 / Task execution start
+- 任务完成 / Task completion
+- 执行时间 / Execution time
+
+日志示例 / Log Example:
+========================================
+Task Submitted #1
+  Task ID: 123456789
+  Submit Time: 1702345678000
+  Thread: main
+  Queue Size: 5
+========================================
+
+--------------------------------------------------------------------------------
+RejectionTrace
+--------------------------------------------------------------------------------
+作用 / Purpose:
+监控任务被拒绝的情况
+Monitor task rejection events
+
+监控内容 / Monitors:
+- 拒绝时间 / Rejection time
+- 线程池状态 / Pool state
+- 队列状态 / Queue state
+- 拒绝策略 / Rejection policy
+
+日志示例 / Log Example:
+========================================
+Task Rejected!
+  Time: 1702345678000
+  Pool Size: 20/20
+  Queue Size: 200/200
+  Rejection Policy: CallerRunsPolicy
+========================================
+
+--------------------------------------------------------------------------------
+ParameterChangeTrace
+--------------------------------------------------------------------------------
+作用 / Purpose:
+监控线程池参数的动态调整
+Monitor dynamic parameter adjustments
+
+监控内容 / Monitors:
+- 核心线程数变化 / Core pool size changes
+- 最大线程数变化 / Max pool size changes
+- 拒绝策略变化 / Rejection policy changes
+
+日志示例 / Log Example:
+========================================
+Thread Pool Parameters Changed
+  Core Pool Size: 5 -> 10
+  Max Pool Size: 20 -> 30
+========================================
+
+--------------------------------------------------------------------------------
+AlertTrace
+--------------------------------------------------------------------------------
+作用 / Purpose:
+监控告警系统的触发
+Monitor alert system triggers
+
+监控内容 / Monitors:
+- 告警触发 / Alert triggers
+- 使用率 / Usage rate
+- 阈值 / Threshold
+- 冷却时间 / Cooldown period
+
+日志示例 / Log Example:
+========================================
+Alert Triggered!
+  Usage Rate: 85.5%
+  Threshold: 80.0%
+  Active Threads: 17/20
+========================================
+
+--------------------------------------------------------------------------------
+PerformanceTrace
+--------------------------------------------------------------------------------
+作用 / Purpose:
+性能分析和慢方法检测
+Performance analysis and slow method detection
+
+监控内容 / Monitors:
+- 方法执行时间 / Method execution time
+- 慢方法（>100ms）/ Slow methods (>100ms)
+- 性能瓶颈 / Performance bottlenecks
+
+日志示例 / Log Example:
+========================================
+Slow Method Detected!
+  Method: processTask
+  Execution Time: 250ms
+  Thread: pool-1-thread-3
+========================================
+
+================================================================================
+常见问题 / FAQ
+================================================================================
+
+Q1: BTrace 命令找不到 / BTrace command not found
+A1: 检查是否已添加到环境变量 PATH
+    Check if BTrace bin directory is added to PATH
+
+Q2: 脚本启动失败 / Script fails to start
+A2: 确认应用正在运行，使用 jps 查看进程
+    Ensure application is running, use jps to check process
+
+Q3: 看不到日志输出 / No log output
+A3: 先生成一些测试任务，触发监控事件
+    Generate test tasks first to trigger monitoring events:
+    curl -X POST http://localhost:8080/api/threadpool/test/submit?count=10
+
+Q4: 如何停止所有监控 / How to stop all monitoring
+A4: curl -X POST http://localhost:8080/api/btrace/stop-all
+
+================================================================================
+完整示例 / Complete Example
+================================================================================
+
+# 1. 启动应用 / Start application
+mvn spring-boot:run
+
+# 2. 启动基础监控 / Start basic monitoring
+curl -X POST http://localhost:8080/api/btrace/quick-start/basic
+
+# 3. 提交测试任务 / Submit test tasks
+curl -X POST http://localhost:8080/api/threadpool/test/submit?count=100
+
+# 4. 查看执行日志 / View execution logs
+curl http://localhost:8080/api/btrace/logs/ThreadPoolExecutionTrace?lines=50
+
+# 5. 查看拒绝日志 / View rejection logs
+curl http://localhost:8080/api/btrace/logs/RejectionTrace?lines=50
+
+# 6. 查看活跃脚本 / View active scripts
+curl http://localhost:8080/api/btrace/active
+
+# 7. 停止监控 / Stop monitoring
+curl -X POST http://localhost:8080/api/btrace/stop-all
+
+================================================================================
+日志文件位置 / Log File Locations
+================================================================================
+
+所有日志保存在 / All logs saved in:
+logs/btrace/
+
+文件列表 / Files:
+- ThreadPoolExecutionTrace.log      (任务执行日志 / Execution logs)
+- RejectionTrace.log                (拒绝日志 / Rejection logs)
+- ParameterChangeTrace.log          (参数变更日志 / Parameter change logs)
+- AlertTrace.log                    (告警日志 / Alert logs)
+- PerformanceTrace.log              (性能日志 / Performance logs)
+
+查看日志 / View logs:
+# Windows
+type logs\btrace\ThreadPoolExecutionTrace.log
+
+# Linux/Mac
+tail -f logs/btrace/ThreadPoolExecutionTrace.log
+
+================================================================================
