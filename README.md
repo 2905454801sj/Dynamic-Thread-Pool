@@ -1,521 +1,318 @@
 # Dynamic Thread Pool Management System
+# 动态线程池管理系统
 
-A Spring Boot project for learning and practicing thread pool management with real-time monitoring and performance optimization.
+[English](#english) | [中文](#中文)
 
-## 📋 Overview
+---
 
-This is my personal project exploring dynamic thread pool management. Features include real-time monitoring, local caching for performance, structured logging, and thread-safe operations.
+<a name="english"></a>
+## 🌐 English
 
-## ✨ Features
+A high-performance dynamic thread pool management system built with Spring Boot, featuring real-time monitoring, intelligent caching, and configurable alerting.
 
-### Core Features
-- **Dynamic Thread Pool**: Runtime parameter adjustment without restart
-- **Real-time Monitoring**: REST API endpoints with cached metrics
-- **Intelligent Caching**: Caffeine-based local cache (1s TTL) for high-performance monitoring
-- **Alert System**: Configurable threshold-based alerting with cooldown
-- **Thread Safety**: AtomicLong counters and proper synchronization
-- **Structured Logging**: SLF4J + Logback with async appenders
+### ✨ Project Highlights
 
-### What I Learned
-- **Performance Optimization**: Achieved 100x improvement using local cache
-- **Cache Strategy**: When to use local cache vs Redis
-- **Thread Safety**: Fixing race conditions with AtomicInteger
-- **Logging Best Practices**: SLF4J parameterized logging
+| Highlight | Description |
+|-----------|-------------|
+| **🚀 100x Performance Boost** | Caffeine local cache with 1s TTL reduces repeated request latency from 100μs to 0.1μs |
+| **🔄 Runtime Parameter Tuning** | Adjust corePoolSize, maxPoolSize, and rejection policy without restart |
+| **🔍 BTrace Dynamic Tracing** | 5 built-in BTrace scripts for runtime JVM instrumentation without restart |
+| **⚡ Zero-Copy Alert System** | AtomicLong counters + CAS operations for lock-free thread-safe alerting |
+| **📊 Comprehensive Metrics** | Thread usage rate, queue usage, rejected count, all exposed via REST API |
+| **🔒 Thread-Safe Design** | AtomicInteger for thread naming, final fields, immutable wrapper pattern |
+| **📝 Async Structured Logging** | SLF4J + Logback with async appenders, 30-50% faster than blocking I/O |
 
-## 🛠️ Tech Stack
+### 🛠️ Tech Stack
 
 | Component | Technology | Version |
 |-----------|-----------|---------|
-| **Language** | Java | JDK 17 |
-| **Framework** | Spring Boot | 3.5.3 |
-| **Build Tool** | Maven | - |
-| **Logging** | SLF4J + Logback | - |
-| **Cache** | Caffeine | Latest |
-| **Metrics** | Micrometer | Latest |
+| Language | Java | JDK 17 |
+| Framework | Spring Boot | 3.5.3 |
+| Cache | Caffeine | Latest |
+| Tracing | BTrace | 2.2.4 |
+| Logging | SLF4J + Logback | - |
+| Metrics | Micrometer + Prometheus | Latest |
 
-## 📦 Project Structure
+### 📦 Architecture
 
 ```
-Dynamic-Thread-Pool/
-├── src/main/java/org/jason/
-│   ├── config/
-│   │   ├── CacheConfig.java           # Cache configuration (NEW)
-│   │   └── ThreadPoolConfig.java      # Thread pool configuration (UPDATED)
-│   ├── controller/
-│   │   └── DynamicThreadPoolController.java  # REST API (UPDATED)
-│   ├── dto/
-│   │   └── ThreadPoolMetrics.java     # Metrics DTO (NEW)
-│   ├── service/
-│   │   └── ThreadPoolMonitorService.java  # Monitoring service (NEW)
-│   └── threadPool/
-│       └── DynamicThreadPool.java     # Core implementation (UPDATED)
-├── src/main/resources/
-│   ├── application.properties         # Application config (NEW)
-│   └── logback-spring.xml            # Logging config (NEW)
-└── pom.xml                           # Dependencies (UPDATED)
+src/main/java/org/jason/
+├── btrace/
+│   └── BTraceManager.java        # BTrace lifecycle management
+├── config/
+│   ├── CacheConfig.java          # Caffeine cache (1s TTL, LRU eviction)
+│   └── ThreadPoolConfig.java     # Thread pool bean with AtomicInteger naming
+├── controller/
+│   ├── BTraceController.java     # BTrace REST API endpoints
+│   └── DynamicThreadPoolController.java  # Thread pool REST API
+├── dto/
+│   └── ThreadPoolMetrics.java    # Type-safe metrics DTO
+├── service/
+│   └── ThreadPoolMonitorService.java  # @Cacheable monitoring service
+└── threadPool/
+    └── DynamicThreadPool.java    # Core: extends ThreadPoolExecutor
+
+src/main/btrace/                   # BTrace scripts (attach to running JVM)
+├── ThreadPoolExecutionTrace.java  # Task execution monitoring
+├── RejectionTrace.java            # Task rejection tracking
+├── ParameterChangeTrace.java      # Parameter change detection
+├── AlertTrace.java                # Alert system monitoring
+└── PerformanceTrace.java          # Performance hotspot analysis
 ```
 
----
+### 🚀 Quick Start
 
-## 🆕 Recent Updates
-
-### 1. Added Intelligent Caching
-
-#### **New File**: `CacheConfig.java`
-**What it does**: Uses local cache to speed up monitoring requests
-
-**Why I did this**:
-- **Problem**: Every request was recalculating everything (slow!)
-- **Impact**: High CPU usage when checking metrics frequently
-- **Solution**: Added Caffeine cache with 1-second TTL
-
-**Key Features**:
-```java
-- Cache Provider: Caffeine (nanosecond-level access)
-- TTL: 1 second (optimal for real-time monitoring)
-- Cache Size: Max 100 entries with LRU eviction
-- Statistics: Enabled for monitoring cache performance
-```
-
-**Results**:
-- 100x faster for repeated requests within 1 second
-- 80% less CPU usage under high load
-
-**Why not Redis?**
-- Local cache is way faster (nanoseconds vs milliseconds)
-- No network overhead
-- Simpler to set up
-- Perfect for short TTL like 1 second
-
----
-
-### 2. Better Logging
-
-#### **New File**: `logback-spring.xml`
-**What it does**: Replaces java.util.logging with SLF4J + Logback
-
-**Why I did this**:
-- **Problem**: Default logging was slow and had no rotation
-- **Impact**: Logs filled up disk, string concatenation was expensive
-- **Solution**: Async logging with automatic file rotation
-
-**Key Features**:
-```xml
-✓ Multiple Log Files:
-  - application.log (general logs)
-  - threadpool.log (thread pool specific)
-  - alert.log (warnings and alerts)
-  - error.log (errors only)
-
-✓ Async Appenders:
-  - Non-blocking log writes
-  - 512-entry queue buffer
-  - Zero business thread impact
-
-✓ Automatic Rotation:
-  - Daily rotation
-  - 30-90 day retention
-  - Size-based limits (1-3GB)
-
-✓ Environment Profiles:
-  - dev: DEBUG level
-  - prod: INFO level
-```
-
-**Results**:
-- 30-50% faster logging
-- Logs don't block the main thread anymore
-
----
-
-### 3. Service Layer for Monitoring
-
-#### **New File**: `ThreadPoolMonitorService.java`
-**What it does**: Centralizes all monitoring logic with caching
-
-**Why I did this**:
-- **Problem**: Controllers were calling thread pool methods directly
-- **Impact**: No caching, lots of duplicate code
-- **Solution**: Created a service layer with `@Cacheable`
-
-**Key Features**:
-```java
-@Cacheable Annotations:
-- getMetrics(): 1-second cache for all metrics
-- getRuntimeStats(): Shared cache with getMetrics()
-- Automatic cache invalidation after TTL
-
-StringBuilder Optimization:
-- Pre-allocated 256-byte buffer
-- Replaces String concatenation
-- Reduces object creation
-
-Cache-Aware Design:
-- First call: Computes and caches
-- Subsequent calls (within 1s): Returns cached data
-- After 1s: Auto-refresh
-```
-
-**Benefits**:
-- Clean separation of concerns
-- Easy to test
-- All caching logic in one place
-
----
-
-### 4. Type-Safe Metrics DTO
-
-#### **New File**: `ThreadPoolMetrics.java`
-**What it does**: Proper Java object for metrics instead of Map
-
-**Why I did this**:
-- **Problem**: Using `Map<String, Object>` everywhere (no type safety)
-- **Impact**: No autocomplete, easy to make mistakes
-- **Solution**: Created a proper DTO class
-
-**Key Features**:
-```java
-Comprehensive Metrics:
-- Core configuration (corePoolSize, maxPoolSize)
-- Runtime statistics (activeCount, taskCount)
-- Queue information (size, remaining capacity)
-- Usage rates (thread usage, queue usage)
-- Alert configuration (threshold, stats)
-
-Serializable:
-- Implements Serializable for caching
-- Timestamp for data freshness
-- Immutable timestamp (set in constructor)
-
-Type Safety:
-- Compile-time type checking
-- IDE autocomplete support
-- Clear API contracts
-```
-
-**Benefits**:
-- IDE autocomplete works
-- Compile-time type checking
-- Much cleaner code
-
----
-
-### 5. Configuration File
-
-#### **New File**: `application.properties`
-**What it does**: Moves configuration out of code
-
-**Why I did this**:
-- **Problem**: Everything was hardcoded
-- **Impact**: Had to recompile to change settings
-- **Solution**: Standard Spring Boot properties file
-
-**Key Configurations**:
-```properties
-Server:
-- server.port=8080
-
-Logging Levels:
-- org.jason.threadPool=INFO
-- org.jason.btrace=INFO
-- org.springframework=INFO
-
-Log Files:
-- logging.file.path=logs
-- logging.file.name=logs/application.log
-
-Thread Pool Defaults:
-- threadpool.core-size=5
-- threadpool.max-size=20
-- threadpool.alert-threshold=0.7
-
-Actuator Endpoints:
-- management.endpoints.web.exposure.include=health,info,metrics
-```
-
-**Benefits**:
-- No recompilation needed
-- Easy to have different dev/prod configs
-
----
-
-### 6. Fixed Thread Safety Bug
-
-#### **Updated File**: `ThreadPoolConfig.java`
-**What I fixed**: Race condition in thread naming
-
-**The Bug**:
-- Used `private int counter = 0` (not thread-safe!)
-- Multiple threads could get the same counter value
-- **Solution**: Changed to `AtomicInteger`
-
-**Changes**:
-```java
-Before (❌ Race Condition):
-private int counter = 0;
-Thread t = new Thread(r, "Pool-" + (++counter));
-
-After (✅ Thread-Safe):
-private final AtomicInteger counter = new AtomicInteger(0);
-Thread t = new Thread(r, "Pool-" + counter.incrementAndGet());
-
-Bonus Enhancement:
-t.setUncaughtExceptionHandler((thread, throwable) -> 
-    logger.error("Uncaught exception in thread: {}", thread.getName(), throwable));
-```
-
-**Bonus**: Also added exception handler to catch uncaught exceptions
-
----
-
-### 7. Improved Core Thread Pool
-
-#### **Updated File**: `DynamicThreadPool.java`
-**What I changed**: Better thread safety and logging
-
-**Changes**:
-- Made `rejectedCount` field final (immutable)
-- Migrated from java.util.logging to SLF4J
-- Used parameterized logging (faster)
-
-**Changes**:
-```java
-Thread Safety:
-- Made rejectedCount final in wrapper class
-- Removed setter method (immutable after construction)
-- Constructor chaining to pass AtomicLong before super()
-
-Logging Migration:
-- Replaced java.util.logging with SLF4J
-- Parameterized logging (logger.warn("...", param1, param2))
-- Conditional debug logging (if (logger.isDebugEnabled()))
-
-Performance:
-- 30-50% reduction in logging overhead
-- No string concatenation unless level matches
-```
-
----
-
-### 8. Simplified Controller
-
-#### **Updated File**: `DynamicThreadPoolController.java`
-**What I changed**: Now uses the monitoring service
-
-**Before**: Controllers called thread pool directly (15+ lines of code)
-**After**: Just call `monitorService.getMetrics()` (1 line!)
-
-**Changes**:
-```java
-Before:
-@GetMapping("/details")
-public ResponseEntity<Map<String, Object>> getDetails() {
-    Map<String, Object> details = new HashMap<>();
-    details.put("corePoolSize", threadPool.getCorePoolSize());
-    details.put("activeCount", threadPool.getActiveCount());
-    // ... 10+ method calls
-    return ResponseEntity.ok(details);
-}
-
-After:
-@GetMapping("/details")
-public ResponseEntity<ThreadPoolMetrics> getDetails() {
-    ThreadPoolMetrics metrics = monitorService.getMetrics();
-    return ResponseEntity.ok(metrics);
-}
-```
-
-**Benefits**: Much simpler code + automatic caching
-
----
-
-### 9. Added Dependencies
-
-#### **Updated File**: `pom.xml`
-**What I added**: Caffeine cache and better logging
-```xml
-<!-- Caffeine Cache -->
-<dependency>
-    <groupId>com.github.ben-manes.caffeine</groupId>
-    <artifactId>caffeine</artifactId>
-</dependency>
-
-<!-- Spring Cache Abstraction -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-cache</artifactId>
-</dependency>
-
-<!-- SLF4J + Logback (via spring-boot-starter-logging) -->
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-logging</artifactId>
-</dependency>
-```
-
----
-
-## 📊 Performance Results
-
-### What I Achieved
-- **100x faster** for repeated requests (within 1 second)
-- **80% less CPU** under high load
-- **Cache hit rate**: Over 95%
-
-### Before vs After
-| Scenario | Before | After |
-|----------|--------|-------|
-| Single request | 100μs | 100μs (first) / 0.1μs (cached) |
-| 100 req/sec | 10ms | 0.1ms |
-| 1000 req/sec | 100ms (high CPU) | 1ms (low CPU) |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
 ```bash
-- JDK 17 or higher
-- Maven 3.6+
-```
-
-### Build and Run
-```bash
-# Clone repository
-git clone <repository-url>
-cd Dynamic-Thread-Pool
-
-# Build
+# Build and run
 mvn clean package
-
-# Run
 java -jar target/DynamicThreadPool-1.0-SNAPSHOT.jar
 
-# Or use Maven
+# Or
 mvn spring-boot:run
 ```
 
-### Access Endpoints
-```bash
-# Health check
-curl http://localhost:8080/api/threadpool/health
+### 📡 API Endpoints
 
-# Get metrics (cached)
-curl http://localhost:8080/api/threadpool/details
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/threadpool/details` | Get cached metrics (1s TTL) |
+| GET | `/api/threadpool/health` | Health check |
+| GET | `/api/threadpool/stats/runtime` | Runtime statistics |
+| POST | `/api/threadpool/config/parameters` | Adjust pool parameters |
+| POST | `/api/threadpool/alert/threshold` | Set alert threshold |
+| POST | `/api/threadpool/test/submit-task` | Submit test tasks |
 
-# Get runtime stats (cached)
-curl http://localhost:8080/api/threadpool/stats/runtime
+### 🔍 BTrace API Endpoints
 
-# Adjust parameters
-curl -X POST http://localhost:8080/api/threadpool/config/parameters \
-  -H "Content-Type: application/json" \
-  -d '{"corePoolSize": 10, "maximumPoolSize": 30}'
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/btrace/scripts` | List available BTrace scripts |
+| GET | `/api/btrace/active` | List running traces |
+| GET | `/api/btrace/status` | BTrace manager status |
+| POST | `/api/btrace/start/{script}` | Start a BTrace script |
+| POST | `/api/btrace/stop/{script}` | Stop a BTrace script |
+| POST | `/api/btrace/quick-start/{preset}` | Quick start presets (basic/alert/performance/full) |
+| GET | `/api/btrace/logs/{script}` | Read script logs |
 
----
+### 📊 Performance Results
 
-## 📈 Monitoring
-
-### Log Files
-```bash
-logs/
-├── application.log      # General application logs
-├── threadpool.log       # Thread pool specific logs
-├── alert.log           # Warnings and alerts
-└── error.log           # Error logs only
-```
-
-### Metrics Endpoint
-```bash
-# Prometheus format (ready for Grafana)
-curl http://localhost:8080/actuator/prometheus
-```
+| Scenario | Before | After |
+|----------|--------|-------|
+| Single request | 100μs | 0.1μs (cached) |
+| 1000 req/sec | 100ms (high CPU) | 1ms (low CPU) |
+| Cache hit rate | N/A | >95% |
 
 ---
 
-## 🔧 Configuration
+<a name="中文"></a>
+## 🌐 中文
 
-### Thread Pool Settings
-Edit `application.properties`:
+基于 Spring Boot 构建的高性能动态线程池管理系统，支持实时监控、智能缓存和可配置告警。
+
+### ✨ 项目亮点
+
+| 亮点 | 描述 |
+|------|------|
+| **🚀 100倍性能提升** | Caffeine 本地缓存（1秒TTL），重复请求延迟从 100μs 降至 0.1μs |
+| **🔄 运行时参数调优** | 无需重启即可调整核心线程数、最大线程数、拒绝策略 |
+| **🔍 BTrace 动态追踪** | 5个内置 BTrace 脚本，运行时 JVM 插桩无需重启 |
+| **⚡ 无锁告警系统** | AtomicLong 计数器 + CAS 操作，实现无锁线程安全告警 |
+| **📊 全面的监控指标** | 线程使用率、队列使用率、拒绝次数，全部通过 REST API 暴露 |
+| **🔒 线程安全设计** | AtomicInteger 线程命名、final 字段、不可变包装器模式 |
+| **📝 异步结构化日志** | SLF4J + Logback 异步输出，比阻塞 I/O 快 30-50% |
+
+### 🛠️ 技术栈
+
+| 组件 | 技术 | 版本 |
+|------|------|------|
+| 语言 | Java | JDK 17 |
+| 框架 | Spring Boot | 3.5.3 |
+| 缓存 | Caffeine | 最新 |
+| 追踪 | BTrace | 2.2.4 |
+| 日志 | SLF4J + Logback | - |
+| 指标 | Micrometer + Prometheus | 最新 |
+
+### 📦 架构设计
+
+```
+src/main/java/org/jason/
+├── btrace/
+│   └── BTraceManager.java        # BTrace 生命周期管理
+├── config/
+│   ├── CacheConfig.java          # Caffeine 缓存配置（1秒TTL，LRU淘汰）
+│   └── ThreadPoolConfig.java     # 线程池 Bean，AtomicInteger 命名
+├── controller/
+│   ├── BTraceController.java     # BTrace REST API 接口
+│   └── DynamicThreadPoolController.java  # 线程池 REST API
+├── dto/
+│   └── ThreadPoolMetrics.java    # 类型安全的指标 DTO
+├── service/
+│   └── ThreadPoolMonitorService.java  # @Cacheable 监控服务
+└── threadPool/
+    └── DynamicThreadPool.java    # 核心：继承 ThreadPoolExecutor
+
+src/main/btrace/                   # BTrace 脚本（附加到运行中的 JVM）
+├── ThreadPoolExecutionTrace.java  # 任务执行监控
+├── RejectionTrace.java            # 任务拒绝追踪
+├── ParameterChangeTrace.java      # 参数变更检测
+├── AlertTrace.java                # 告警系统监控
+└── PerformanceTrace.java          # 性能热点分析
+```
+
+### 🚀 快速开始
+
+```bash
+# 构建并运行
+mvn clean package
+java -jar target/DynamicThreadPool-1.0-SNAPSHOT.jar
+
+# 或者
+mvn spring-boot:run
+```
+
+### 📡 API 接口
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/api/threadpool/details` | 获取缓存的指标（1秒TTL） |
+| GET | `/api/threadpool/health` | 健康检查 |
+| GET | `/api/threadpool/stats/runtime` | 运行时统计 |
+| POST | `/api/threadpool/config/parameters` | 调整线程池参数 |
+| POST | `/api/threadpool/alert/threshold` | 设置告警阈值 |
+| POST | `/api/threadpool/test/submit-task` | 提交测试任务 |
+
+### 🔍 BTrace API 接口
+
+| 方法 | 端点 | 描述 |
+|------|------|------|
+| GET | `/api/btrace/scripts` | 列出可用的 BTrace 脚本 |
+| GET | `/api/btrace/active` | 列出运行中的追踪 |
+| GET | `/api/btrace/status` | BTrace 管理器状态 |
+| POST | `/api/btrace/start/{script}` | 启动 BTrace 脚本 |
+| POST | `/api/btrace/stop/{script}` | 停止 BTrace 脚本 |
+| POST | `/api/btrace/quick-start/{preset}` | 快速启动预设 (basic/alert/performance/full) |
+| GET | `/api/btrace/logs/{script}` | 读取脚本日志 |
+
+### 📊 性能对比
+
+| 场景 | 优化前 | 优化后 |
+|------|--------|--------|
+| 单次请求 | 100μs | 0.1μs（缓存命中） |
+| 1000请求/秒 | 100ms（高CPU） | 1ms（低CPU） |
+| 缓存命中率 | 无 | >95% |
+
+---
+
+## 🔍 BTrace Dynamic Tracing / BTrace 动态追踪
+
+### Available Scripts / 可用脚本
+
+| Script | Description (EN) | 描述 (中文) |
+|--------|------------------|-------------|
+| `ThreadPoolExecutionTrace` | Monitor task submission, execution time, completion | 监控任务提交、执行时间、完成状态 |
+| `RejectionTrace` | Track task rejection events and reasons | 追踪任务拒绝事件和原因 |
+| `ParameterChangeTrace` | Detect runtime parameter changes | 检测运行时参数变更 |
+| `AlertTrace` | Monitor alert system triggers | 监控告警系统触发 |
+| `PerformanceTrace` | Performance hotspot analysis, slow method detection | 性能热点分析、慢方法检测 |
+
+### Quick Start Presets / 快速启动预设
+
+```bash
+# Basic monitoring (task execution + rejection)
+# 基础监控（任务执行 + 拒绝）
+curl -X POST http://localhost:8080/api/btrace/quick-start/basic
+
+# Alert monitoring (alert + parameter changes)
+# 告警监控（告警 + 参数变更）
+curl -X POST http://localhost:8080/api/btrace/quick-start/alert
+
+# Performance analysis
+# 性能分析
+curl -X POST http://localhost:8080/api/btrace/quick-start/performance
+
+# Full monitoring (all scripts)
+# 全量监控（所有脚本）
+curl -X POST http://localhost:8080/api/btrace/quick-start/full
+```
+
+### BTrace Features / BTrace 特性
+
+- **Zero Downtime**: Attach to running JVM without restart / 零停机：无需重启即可附加到运行中的 JVM
+- **Low Overhead**: Minimal performance impact / 低开销：对性能影响极小
+- **Safe**: Read-only tracing, no code modification / 安全：只读追踪，不修改代码
+- **Real-time**: Immediate visibility into JVM internals / 实时：即时查看 JVM 内部状态
+
+---
+
+## 🔧 Configuration / 配置
+
+### Thread Pool Settings / 线程池设置
 ```properties
 threadpool.core-size=5
 threadpool.max-size=20
 threadpool.queue-capacity=200
 threadpool.alert-threshold=0.7
+threadpool.alert-cooldown-ms=60000
 ```
 
-### Logging Levels
-```properties
-logging.level.org.jason.threadPool=INFO
-logging.level.org.jason.service=DEBUG
+### Log Files / 日志文件
+```
+logs/
+├── application.log    # General logs / 通用日志
+├── threadpool.log     # Thread pool logs / 线程池日志
+├── alert.log          # Warnings & alerts / 告警日志
+└── error.log          # Errors only / 错误日志
 ```
 
 ---
 
-## 📝 API Documentation
+## 📝 API Response Example / API 响应示例
 
 ### GET `/api/threadpool/details`
-Returns cached thread pool metrics (1s TTL)
-
-**Response**: `ThreadPoolMetrics` object
 ```json
 {
   "corePoolSize": 5,
   "maximumPoolSize": 20,
+  "poolSize": 5,
   "activeCount": 3,
+  "taskCount": 150,
+  "completedTaskCount": 147,
   "queueSize": 10,
-  "threadUsageRate": 0.15,
+  "queueRemainingCapacity": 190,
   "rejectedExecutionCount": 0,
+  "threadUsageRate": 0.15,
+  "queueUsageRate": 0.05,
+  "alertThreshold": 0.7,
   "timestamp": 1702345678000
 }
 ```
 
 ### POST `/api/threadpool/config/parameters`
-Dynamically adjust thread pool parameters
-
-**Request Body**:
 ```json
+// Request
 {
   "corePoolSize": 10,
   "maximumPoolSize": 30,
   "rejectionPolicy": "CallerRuns"
 }
+
+// Response
+{
+  "success": true,
+  "message": "线程池参数设置成功",
+  "corePoolSize": 10,
+  "maximumPoolSize": 30
+}
 ```
 
 ---
 
-## 💭 What I Learned
-
-### Local Cache vs Redis
-- Local cache is **way faster** for short TTL (1 second)
-- No network overhead
-- Perfect for single-instance apps
-- Redis is better for distributed systems
-
-### SLF4J + Logback
-- Much faster than java.util.logging
-- Async logging doesn't block threads
-- Automatic log rotation
-- Parameterized logging is cleaner
-
-### Service Layer Pattern
-- Keeps controllers simple
-- Easy to add caching
-- Business logic in one place
-- Easier to test
-
----
-
-## 👤 Author
+## 👤 Author / 作者
 
 **孙杰 (Sun Jie / Jason Skyler)**
 
-This is my personal learning project. Feel free to use it for reference!
-
 ---
 
-## 🙏 Thanks To
+## 📄 License / 许可证
 
-- Spring Boot - Great framework
-- Caffeine - Super fast cache
-- Logback - Solid logging
+MIT License
